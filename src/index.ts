@@ -7,53 +7,108 @@ import { AgentRunner, ModelMessage } from './core/AgentRunner';
 import { AgenticLoop } from './core/AgenticLoop';
 import { ResponsePath } from './core/ResponsePath';
 
+// Security Modules
+import { globalSecurityManager } from './security/SecurityManager';
+import { ConfigParser } from './security/SecretRefParser';
+import { SecurePathResolver } from './security/PathResolver';
+import { SecureRouter } from './server/HttpRouter';
+import { DockerSandboxManager } from './security/DockerSandboxManager';
+import path from 'path';
+import fs from 'fs';
+
 config();
 
 async function bootstrap() {
-  console.log("Initializing Agent Gateway Background Process...");
+  console.log("Initializing Secure AI Gateway Background Process...");
+
+  // Phase 2: Configuration & Secrets (SecretRef Paradigm)
+  const configParser = new ConfigParser();
+  const configPath = path.join(__dirname, '../config.json5');
+
+  if (!fs.existsSync(configPath)) {
+    console.error("Config file missing.");
+  }
+
+  let appConfig: any;
+  try {
+    appConfig = configParser.parseConfig(configPath);
+    console.log("[Security] Configuration parsed successfully following SecretRef Paradigm.");
+  } catch (error: any) {
+    console.error(`[Security] Configuration Error: ${error.message}`);
+    process.exit(1);
+  }
+
+  // Enforce secure-by-default architecture
+  if (!globalSecurityManager.canAccessFileSystem()) {
+    console.log("[Security] Policy Enforced: Agent FileSystem access DENIED by default.");
+  }
 
   // Phase 1 Initialization
   await initDb();
 
-  // Stage 1: Channel Adapter
-  const telegramToken = process.env.TELEGRAM_BOT_TOKEN || 'DUMMY_TOKEN';
-  const adapter = new TelegramAdapter(telegramToken);
+  // Create secure workspace
+  const safeWorkspaceDir = path.join(__dirname, '../agent_workspace');
+  const pathResolver = new SecurePathResolver(safeWorkspaceDir);
 
-  // Stage 2: Gateway Server
-  const gateway = new GatewayServer();
+  // Explicit HTTP Routing and Pre-Authentication
+  const webhookSecret = process.env.WEBHOOK_SECRET || 'fallback_dev_secret';
+  const router = new SecureRouter(webhookSecret);
 
-  // Stage 3: Lane Queue
-  const laneQueue = new LaneQueue();
-
-  // Stage 4: Agent Runner (Configured for a mocked OpenAI model with hard limits)
-  const agentRunner = new AgentRunner({
-    provider: 'openai',
-    modelName: 'gpt-4',
-    apiKey: process.env.OPENAI_API_KEY || 'DUMMY_API_KEY',
-    maxTokens: 4000,
-    coolingRateMs: 1000 // 1 req/sec limit
+  router.registerRoute({
+    method: 'POST',
+    path: '/api/telegram/webhook',
+    match: /^\/api\/telegram\/webhook$/,
+    auth: 'signature',
+    handler: async (req, res, body) => {
+      console.log("[Router] Webhook received securely.");
+      res.writeHead(200);
+      res.end('OK');
+    }
   });
 
-  // Stage 6: Response Path
+  // Bind exclusively to localhost to prevent public internet access to the raw process
+  const port = appConfig?.server?.port || 3000;
+  router.listen(port);
+
+  // Micro Virtual Containers setup
+  const sandboxManager = new DockerSandboxManager();
+  const sandboxId = sandboxManager.spawnSandbox({
+    imageName: "agent-runner:latest", // Conceptually image name
+    allowHostLocalhost: true,
+    gatewayName: "primary-gateway"
+  }, {
+    // Inject API key dynamically into memory. NEVER mounted as a file.
+    OPENAI_API_KEY: appConfig?.llm?.apiKey || 'DUMMY_KEY'
+  });
+
+  // Phase 1 flow
+  const telegramToken = process.env.TELEGRAM_BOT_TOKEN || 'DUMMY_TOKEN';
+  const adapter = new TelegramAdapter(telegramToken);
+  const gateway = new GatewayServer();
+  const laneQueue = new LaneQueue();
+
+  const agentRunner = new AgentRunner({
+    provider: appConfig?.llm?.provider || 'openai',
+    modelName: appConfig?.llm?.model || 'gpt-4',
+    apiKey: appConfig?.llm?.apiKey || 'DUMMY_KEY',
+    maxTokens: 4000,
+    coolingRateMs: 1000
+  });
+
   const responsePath = new ResponsePath();
 
-  // Connect the pipeline
   adapter.onMessage(async (normalizedMessage) => {
-    // Stage 2: Gateway routing
     const routeContext = await gateway.route(normalizedMessage);
 
-    // Stage 3: Enqueue task in strictly serial, FIFO lane per session
     laneQueue.enqueue(routeContext.sessionId, async () => {
-      // Setup the logger for Stage 6 to store deterministic transcripts
       const stepLogger = async (entry: any) => {
         await responsePath.logTranscript(routeContext.sessionId, entry);
       };
 
-      // Stage 5: Agentic Loop
-      const agenticLoop = new AgenticLoop(agentRunner, stepLogger);
+      // Inject secure path resolver into the loop
+      const agenticLoop = new AgenticLoop(agentRunner, stepLogger, pathResolver);
 
       const db = await getDb();
-      // Fetch conversation history for this session as initial context
       const history = await db.all(
         `SELECT role, content FROM messages WHERE session_id = ? ORDER BY timestamp ASC`,
         [routeContext.sessionId]
@@ -66,17 +121,14 @@ async function bootstrap() {
 
       console.log(`[Pipeline] Session ${routeContext.sessionId} lane starting loop.`);
 
-      // Execute the reasoning loop
       const finalResult = await agenticLoop.start(routeContext.sessionId, messages);
 
-      // Stage 6: Stream the result back to the user
       await responsePath.streamResponse(adapter, normalizedMessage.channelId, finalResult);
 
       console.log(`[Pipeline] Session ${routeContext.sessionId} lane task completed.`);
     });
   });
 
-  // Start listening
   if (telegramToken !== 'DUMMY_TOKEN') {
     adapter.start();
   } else {

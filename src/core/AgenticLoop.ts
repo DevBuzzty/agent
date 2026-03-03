@@ -1,8 +1,9 @@
 import { AgentRunner, ModelMessage, RunnerResponse } from './AgentRunner';
 import { CalculatorTool } from '../tools/Calculator';
-import { FileReaderTool } from '../tools/FileReader';
+import { createFileReaderTool } from '../tools/FileReader';
 import { getDb } from '../db';
 import { randomUUID } from 'crypto';
+import { SecurePathResolver } from '../security/PathResolver';
 
 export interface ToolResult {
   tool_call_id: string;
@@ -21,13 +22,15 @@ export class AgenticLoop {
   private tools: Record<string, any>;
   private stepLogger: StepLogger;
 
-  constructor(runner: AgentRunner, stepLogger: StepLogger) {
+  constructor(runner: AgentRunner, stepLogger: StepLogger, pathResolver: SecurePathResolver) {
     this.runner = runner;
     this.stepLogger = stepLogger;
 
+    const fileReader = createFileReaderTool(pathResolver);
+
     this.tools = {
       [CalculatorTool.name]: CalculatorTool,
-      [FileReaderTool.name]: FileReaderTool
+      [fileReader.name]: fileReader
     };
   }
 

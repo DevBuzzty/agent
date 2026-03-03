@@ -1,0 +1,16 @@
+{
+  "server": {
+    "host": "127.0.0.1",
+    "port": 3000
+  },
+  "llm": {
+    "provider": "openai",
+    "model": "gpt-4",
+    // SecretRef ensures keys are never plain text
+    "apiKey": {
+      "type": "SecretRef",
+      "method": "env",
+      "value": "OPENAI_API_KEY"
+    }
+  }
+}
