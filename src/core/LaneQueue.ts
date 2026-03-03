@@ -1,0 +1,53 @@
+export type Task = () => Promise<void>;
+
+/**
+ * Ensures strict, serial FIFO execution of tasks *per session*.
+ * This prevents race conditions and file system corruption by concurrent writes on the same context.
+ */
+export class LaneQueue {
+  private queues: Map<string, Task[]> = new Map();
+  private processing: Set<string> = new Set();
+
+  /**
+   * Enqueue a task for a specific session lane.
+   */
+  public enqueue(sessionId: string, task: Task): void {
+    if (!this.queues.has(sessionId)) {
+      this.queues.set(sessionId, []);
+    }
+    this.queues.get(sessionId)!.push(task);
+
+    // If this lane isn't currently processing, start it
+    if (!this.processing.has(sessionId)) {
+      this.processLane(sessionId);
+    }
+  }
+
+  /**
+   * Process tasks in a specific lane sequentially.
+   */
+  private async processLane(sessionId: string): Promise<void> {
+    this.processing.add(sessionId);
+
+    const queue = this.queues.get(sessionId);
+
+    while (queue && queue.length > 0) {
+      const currentTask = queue.shift();
+      if (currentTask) {
+        try {
+          await currentTask();
+        } catch (error) {
+          console.error(`[LaneQueue] Task execution failed in session ${sessionId}:`, error);
+          // In a real production system, you might want to retry, alert, or pause the queue.
+        }
+      }
+    }
+
+    this.processing.delete(sessionId);
+
+    // Clean up empty queue map
+    if (queue && queue.length === 0) {
+        this.queues.delete(sessionId);
+    }
+  }
+}
