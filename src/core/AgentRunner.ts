@@ -2,19 +2,21 @@ import { getDb } from '../db';
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { FirstClassTool } from '../tools/FirstClassTool';
 
 export interface LLMConfig {
   provider: 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'moonshot' | 'openrouter';
   modelName: string;
   apiKey: string;
-  maxTokens: number; // hard token truncation limit
-  coolingRateMs: number; // rate limit cooling
+  maxTokens: number;
+  coolingRateMs: number;
 }
 
 export interface ModelMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
   content: string;
   tool_call_id?: string;
+  tool_calls?: Array<{ id: string, name: string, args: Record<string, any> }>;
 }
 
 export interface RunnerResponse {
@@ -26,9 +28,14 @@ export interface RunnerResponse {
 export class AgentRunner {
   private config: LLMConfig;
   private lastCallTime: number = 0;
+  private registeredTools: FirstClassTool[] = [];
 
   constructor(config: LLMConfig) {
     this.config = config;
+  }
+
+  public registerTools(tools: FirstClassTool[]) {
+      this.registeredTools = tools;
   }
 
   private async applyCooling(): Promise<void> {
@@ -57,8 +64,9 @@ export class AgentRunner {
       const msg = messages[i];
       if (msg.role === 'system') continue;
 
-      if (currentChars + msg.content.length <= maxChars) {
-        currentChars += msg.content.length;
+      const len = msg.content ? msg.content.length : 100; // rough estimate for tool calls
+      if (currentChars + len <= maxChars) {
+        currentChars += len;
         truncatedMessages.unshift(msg);
       } else {
         console.warn(`[AgentRunner] Context window full. Truncating history.`);
@@ -69,9 +77,27 @@ export class AgentRunner {
     return truncatedMessages;
   }
 
+  private buildSystemPrompt(): string {
+      let prompt = "You are a highly capable AI agent.\n\nHere are the First-Class Tools available to you. You MUST strictly use their exact JSON Schema for arguments.\n";
+      for (const tool of this.registeredTools) {
+          prompt += `---\n${tool.getSystemPromptText()}\n`;
+      }
+      return prompt;
+  }
+
   async run(messages: ModelMessage[]): Promise<RunnerResponse> {
     await this.applyCooling();
-    const contextMessages = this.applyContextWindowManagement(messages);
+
+    const systemPromptText = this.buildSystemPrompt();
+    let injectedMessages = [...messages];
+    const systemMsgIndex = injectedMessages.findIndex(m => m.role === 'system');
+    if (systemMsgIndex > -1) {
+       injectedMessages[systemMsgIndex].content = `${systemPromptText}\n\nUser Context:\n${injectedMessages[systemMsgIndex].content}`;
+    } else {
+       injectedMessages.unshift({ role: 'system', content: systemPromptText });
+    }
+
+    const contextMessages = this.applyContextWindowManagement(injectedMessages);
 
     console.log(`[AgentRunner] Running model ${this.config.provider}:${this.config.modelName}`);
 
@@ -86,6 +112,17 @@ export class AgentRunner {
     throw new Error(`Unsupported provider: ${this.config.provider}`);
   }
 
+  private buildOpenAITools(): any[] {
+     return this.registeredTools.map(t => ({
+         type: "function",
+         function: {
+             name: t.name,
+             description: t.description,
+             parameters: t.parameters
+         }
+     }));
+  }
+
   private async runOpenAICompatible(messages: ModelMessage[]): Promise<RunnerResponse> {
     const baseURLs: Record<string, string> = {
       'openai': 'https://api.openai.com/v1',
@@ -96,7 +133,6 @@ export class AgentRunner {
 
     const baseURL = baseURLs[this.config.provider];
 
-    // Fallback to avoid crash if mock run
     if(this.config.apiKey === 'mock') {
          return {
           text: "I am a mock LLM. I received your message and executed.",
@@ -110,36 +146,26 @@ export class AgentRunner {
       baseURL: baseURL
     });
 
+    const openAITools = this.buildOpenAITools();
+
     try {
+      const apiMessages: any[] = messages.map(m => {
+          const apiMsg: any = { role: m.role, content: m.content || null };
+          if (m.tool_call_id) apiMsg.tool_call_id = m.tool_call_id;
+          if (m.tool_calls && m.tool_calls.length > 0) {
+              apiMsg.tool_calls = m.tool_calls.map(tc => ({
+                  id: tc.id,
+                  type: 'function',
+                  function: { name: tc.name, arguments: JSON.stringify(tc.args) }
+              }));
+          }
+          return apiMsg;
+      });
+
       const response = await openai.chat.completions.create({
         model: this.config.modelName,
-        messages: messages.map(m => ({ role: m.role as any, content: m.content })),
-        tools: [
-            {
-                type: "function",
-                function: {
-                    name: "calculator",
-                    description: "Evaluate a mathematical expression safely.",
-                    parameters: {
-                        type: "object",
-                        properties: { expression: { type: "string" } },
-                        required: ["expression"]
-                    }
-                }
-            },
-            {
-                type: "function",
-                function: {
-                    name: "file_reader",
-                    description: "Read the contents of a text file from disk.",
-                    parameters: {
-                        type: "object",
-                        properties: { filepath: { type: "string" } },
-                        required: ["filepath"]
-                    }
-                }
-            }
-        ]
+        messages: apiMessages,
+        tools: openAITools.length > 0 ? openAITools : undefined
       });
 
       const choice = response.choices[0];
@@ -159,22 +185,15 @@ export class AgentRunner {
       };
     } catch (e: any) {
         console.error("LLM Error:", e.message);
-        return { text: "Error calling LLM", toolCalls: [], finishReason: 'stop' };
+        return { text: `Error calling LLM: ${e.message}`, toolCalls: [], finishReason: 'stop' };
     }
   }
 
   private async runAnthropic(messages: ModelMessage[]): Promise<RunnerResponse> {
-     // Fallback to avoid crash if mock run
     if(this.config.apiKey === 'mock') {
-         return {
-          text: "I am a mock Anthropic LLM.",
-          toolCalls: [],
-          finishReason: 'stop'
-        };
+         return { text: "I am a mock Anthropic LLM.", toolCalls: [], finishReason: 'stop' };
     }
     const anthropic = new Anthropic({ apiKey: this.config.apiKey });
-
-    // Convert tool format for Anthropic... (simplified for PoC)
     const system = messages.filter(m => m.role === 'system').map(m => m.content).join('\n');
     const userMsgs = messages.filter(m => m.role !== 'system').map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user' as const, content: m.content }));
 
@@ -188,31 +207,21 @@ export class AgentRunner {
 
         return {
             text: response.content.map(c => c.type === 'text' ? c.text : '').join(''),
-            toolCalls: [], // Implement tool translation if needed
+            toolCalls: [],
             finishReason: 'stop'
         }
     } catch (e: any) {
-         console.error("LLM Error:", e.message);
-         return { text: "Error calling LLM", toolCalls: [], finishReason: 'stop' };
+         return { text: `Error calling LLM: ${e.message}`, toolCalls: [], finishReason: 'stop' };
     }
   }
 
   private async runGemini(messages: ModelMessage[]): Promise<RunnerResponse> {
-      // Fallback to avoid crash if mock run
     if(this.config.apiKey === 'mock') {
-         return {
-          text: "I am a mock Gemini LLM.",
-          toolCalls: [],
-          finishReason: 'stop'
-        };
+         return { text: "I am a mock Gemini LLM.", toolCalls: [], finishReason: 'stop' };
     }
     const genAI = new GoogleGenerativeAI(this.config.apiKey);
     const model = genAI.getGenerativeModel({ model: this.config.modelName });
-
-    const history = messages.map(m => ({
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{text: m.content}]
-    }));
+    const history = messages.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{text: m.content || ''}] }));
 
     try {
         const chat = model.startChat({ history: history.slice(0, -1) });
@@ -221,12 +230,11 @@ export class AgentRunner {
 
         return {
             text: result.response.text(),
-            toolCalls: [], // Implement tool translation if needed
+            toolCalls: [],
             finishReason: 'stop'
         }
     } catch (e: any) {
-         console.error("LLM Error:", e.message);
-         return { text: "Error calling LLM", toolCalls: [], finishReason: 'stop' };
+         return { text: `Error calling LLM: ${e.message}`, toolCalls: [], finishReason: 'stop' };
     }
   }
 }

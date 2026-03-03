@@ -21,7 +21,6 @@ config();
 async function bootstrap() {
   console.log("Initializing Secure AI Gateway Background Process...");
 
-  // Phase 2: Configuration & Secrets (SecretRef Paradigm)
   const configParser = new ConfigParser();
   const configPath = path.join(__dirname, '../config.json5');
 
@@ -38,19 +37,15 @@ async function bootstrap() {
     process.exit(1);
   }
 
-  // Enforce secure-by-default architecture
   if (!globalSecurityManager.canAccessFileSystem()) {
     console.log("[Security] Policy Enforced: Agent FileSystem access DENIED by default.");
   }
 
-  // Phase 1 Initialization
   await initDb();
 
-  // Create secure workspace
   const safeWorkspaceDir = path.join(__dirname, '../agent_workspace');
   const pathResolver = new SecurePathResolver(safeWorkspaceDir);
 
-  // Explicit HTTP Routing and Pre-Authentication
   const webhookSecret = process.env.WEBHOOK_SECRET || 'fallback_dev_secret';
   const router = new SecureRouter(webhookSecret);
 
@@ -66,22 +61,18 @@ async function bootstrap() {
     }
   });
 
-  // Bind exclusively to localhost to prevent public internet access to the raw process
   const port = appConfig?.server?.port || 3000;
   router.listen(port);
 
-  // Micro Virtual Containers setup
   const sandboxManager = new DockerSandboxManager();
   const sandboxId = sandboxManager.spawnSandbox({
-    imageName: "agent-runner:latest", // Conceptually image name
+    imageName: "agent-runner:latest",
     allowHostLocalhost: true,
     gatewayName: "primary-gateway"
   }, {
-    // Inject API key dynamically into memory. NEVER mounted as a file.
     OPENAI_API_KEY: appConfig?.llm?.apiKey || 'DUMMY_KEY'
   });
 
-  // Phase 1 flow
   const telegramToken = process.env.TELEGRAM_BOT_TOKEN || 'DUMMY_TOKEN';
   const adapter = new TelegramAdapter(telegramToken);
   const gateway = new GatewayServer();
@@ -105,8 +96,8 @@ async function bootstrap() {
         await responsePath.logTranscript(routeContext.sessionId, entry);
       };
 
-      // Inject secure path resolver into the loop
-      const agenticLoop = new AgenticLoop(agentRunner, stepLogger, pathResolver);
+      // Pass sessionId correctly to match the updated AgenticLoop signature
+      const agenticLoop = new AgenticLoop(agentRunner, stepLogger, pathResolver, routeContext.sessionId);
 
       const db = await getDb();
       const history = await db.all(
