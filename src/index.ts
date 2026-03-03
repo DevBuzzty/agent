@@ -16,6 +16,10 @@ import { DockerSandboxManager } from './security/DockerSandboxManager';
 import path from 'path';
 import fs from 'fs';
 
+// Knowledge Modules
+import { KnowledgeManager } from './knowledge/KnowledgeManager';
+import { KnowledgeWatcher } from './knowledge/KnowledgeWatcher';
+
 config();
 
 async function bootstrap() {
@@ -46,23 +50,22 @@ async function bootstrap() {
   const safeWorkspaceDir = path.join(__dirname, '../agent_workspace');
   const pathResolver = new SecurePathResolver(safeWorkspaceDir);
 
-  const webhookSecret = process.env.WEBHOOK_SECRET || 'fallback_dev_secret';
-  const router = new SecureRouter(webhookSecret);
+  // Phase 4: Knowledge Management Setup
+  const knowledgeHierarchy = {
+      bundled: path.join(__dirname, '../../knowledge_modules/bundled'),
+      shared_machine: path.join(__dirname, '../../knowledge_modules/shared'),
+      workspace: path.join(__dirname, '../../knowledge_modules/workspace'),
+  };
 
-  router.registerRoute({
-    method: 'POST',
-    path: '/api/telegram/webhook',
-    match: /^\/api\/telegram\/webhook$/,
-    auth: 'signature',
-    handler: async (req, res, body) => {
-      console.log("[Router] Webhook received securely.");
-      res.writeHead(200);
-      res.end('OK');
-    }
+  Object.values(knowledgeHierarchy).forEach(dir => {
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   });
 
-  const port = appConfig?.server?.port || 3000;
-  router.listen(port);
+  const knowledgeManager = new KnowledgeManager(knowledgeHierarchy);
+  await knowledgeManager.refreshModules();
+
+  const knowledgeWatcher = new KnowledgeWatcher(knowledgeManager, Object.values(knowledgeHierarchy));
+  knowledgeWatcher.watch();
 
   const sandboxManager = new DockerSandboxManager();
   const sandboxId = sandboxManager.spawnSandbox({
@@ -86,9 +89,11 @@ async function bootstrap() {
     coolingRateMs: 1000
   });
 
+  agentRunner.setKnowledgeManager(knowledgeManager);
   const responsePath = new ResponsePath();
 
-  adapter.onMessage(async (normalizedMessage) => {
+  // Core Pipeline Execution Logic
+  const processPipeline = async (normalizedMessage: any) => {
     const routeContext = await gateway.route(normalizedMessage);
 
     laneQueue.enqueue(routeContext.sessionId, async () => {
@@ -96,7 +101,6 @@ async function bootstrap() {
         await responsePath.logTranscript(routeContext.sessionId, entry);
       };
 
-      // Pass sessionId correctly to match the updated AgenticLoop signature
       const agenticLoop = new AgenticLoop(agentRunner, stepLogger, pathResolver, routeContext.sessionId);
 
       const db = await getDb();
@@ -118,7 +122,44 @@ async function bootstrap() {
 
       console.log(`[Pipeline] Session ${routeContext.sessionId} lane task completed.`);
     });
+  };
+
+  // Wire Telegram polling
+  adapter.onMessage(processPipeline);
+
+  // Wire explicit HTTP Routing and Pre-Authentication Webhooks
+  const webhookSecret = process.env.WEBHOOK_SECRET || 'fallback_dev_secret';
+  const router = new SecureRouter(webhookSecret);
+
+  router.registerRoute({
+    method: 'POST',
+    path: '/api/telegram/webhook',
+    match: /^\/api\/telegram\/webhook$/,
+    auth: 'signature',
+    handler: async (req, res, body) => {
+      console.log("[Router] Webhook received securely. Pushing to Lane Queue.");
+      res.writeHead(200);
+      res.end('OK');
+
+      // Construct a normalized message from the verified webhook body
+      if (body && body.message) {
+         const msg = body.message;
+         const normalized = {
+            id: String(msg.message_id || Date.now()),
+            source: 'webhook',
+            channelId: String(msg.chat?.id || 'unknown'),
+            authToken: String(msg.from?.id || 'unknown'),
+            text: msg.text || '',
+            mediaAttachments: [],
+            timestamp: msg.date ? msg.date * 1000 : Date.now()
+         };
+         await processPipeline(normalized);
+      }
+    }
   });
+
+  const port = appConfig?.server?.port || 3000;
+  router.listen(port);
 
   if (telegramToken !== 'DUMMY_TOKEN') {
     adapter.start();

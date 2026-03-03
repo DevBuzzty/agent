@@ -3,6 +3,7 @@ import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { FirstClassTool } from '../tools/FirstClassTool';
+import { KnowledgeManager } from '../knowledge/KnowledgeManager';
 
 export interface LLMConfig {
   provider: 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'moonshot' | 'openrouter';
@@ -29,6 +30,7 @@ export class AgentRunner {
   private config: LLMConfig;
   private lastCallTime: number = 0;
   private registeredTools: FirstClassTool[] = [];
+  private knowledgeManager?: KnowledgeManager;
 
   constructor(config: LLMConfig) {
     this.config = config;
@@ -36,6 +38,10 @@ export class AgentRunner {
 
   public registerTools(tools: FirstClassTool[]) {
       this.registeredTools = tools;
+  }
+
+  public setKnowledgeManager(km: KnowledgeManager) {
+      this.knowledgeManager = km;
   }
 
   private async applyCooling(): Promise<void> {
@@ -82,6 +88,20 @@ export class AgentRunner {
       for (const tool of this.registeredTools) {
           prompt += `---\n${tool.getSystemPromptText()}\n`;
       }
+
+      // Phase 4: Dynamic Knowledge Injection
+      if (this.knowledgeManager) {
+          const modules = this.knowledgeManager.getLoadedModules();
+          if (modules.length > 0) {
+              prompt += `\n\n--- DOMAIN KNOWLEDGE ---\n`;
+              for (const mod of modules) {
+                  prompt += `\n[Module: ${mod.name}]\nDescription: ${mod.description}\nInstructions:\n${mod.instructions}\n`;
+              }
+              const overhead = this.knowledgeManager.calculateTokenOverhead();
+              console.log(`[AgentRunner] Injected ${modules.length} knowledge modules. Calculated Overhead: ${overhead} characters.`);
+          }
+      }
+
       return prompt;
   }
 
