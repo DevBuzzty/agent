@@ -99,6 +99,37 @@ program
   });
 
 program
+  .action(async () => {
+    // If no command is provided, show the interactive main menu
+    const { showMainMenu } = await import('./tui/mainMenu');
+    await showMainMenu();
+  });
+
+program
+  .command('knowledge')
+  .description('Open the interactive Knowledge Module Generator Wizard')
+  .action(async () => {
+    const { runKnowledgeWizard } = await import('./tui/knowledgeWizard');
+    await runKnowledgeWizard();
+  });
+
+program
+  .command('chat')
+  .description('Start a local terminal chat with the Agent')
+  .action(async () => {
+    const { runTerminalChat } = await import('./tui/chat');
+    await runTerminalChat();
+  });
+
+program
+  .command('security')
+  .description('Open the interactive Security & Policy Dashboard')
+  .action(async () => {
+    const { runSecurityDashboard } = await import('./tui/securityDashboard');
+    await runSecurityDashboard();
+  });
+
+program
   .command('logs')
   .description('Tail the live logs of the Gateway daemon')
   .action(() => {

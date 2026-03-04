@@ -84,7 +84,22 @@ export async function runOnboarding() {
   console.log("\n✅ Setup abgeschlossen!");
   console.log(`- Konfiguration gespeichert in: ${configPath}`);
   console.log(`- API Keys sicher ausgelagert in: ${envPath}`);
-  console.log("\nDu kannst den Gateway-Server nun starten mit: chyi start");
+
+  const nextStep = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'hatch',
+      message: 'Möchtest du den Agenten jetzt in einem Terminal-Chat initialisieren (Hatch)?',
+      default: true
+    }
+  ]);
+
+  if (nextStep.hatch) {
+     const { runTerminalChat } = await import('./tui/chat');
+     await runTerminalChat();
+  } else {
+     console.log("\nDu kannst den Gateway-Server jederzeit starten mit: chyi start");
+  }
 }
 
 if (require.main === module) {

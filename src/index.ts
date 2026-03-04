@@ -51,10 +51,11 @@ async function bootstrap() {
   const pathResolver = new SecurePathResolver(safeWorkspaceDir);
 
   // Phase 4: Knowledge Management Setup
+  // Note: __dirname is dist/, so we go up one level to root.
   const knowledgeHierarchy = {
-      bundled: path.join(__dirname, '../../knowledge_modules/bundled'),
-      shared_machine: path.join(__dirname, '../../knowledge_modules/shared'),
-      workspace: path.join(__dirname, '../../knowledge_modules/workspace'),
+      bundled: path.join(__dirname, '../knowledge_modules/bundled'),
+      shared_machine: path.join(__dirname, '../knowledge_modules/shared'),
+      workspace: path.join(__dirname, '../knowledge_modules/workspace'),
   };
 
   Object.values(knowledgeHierarchy).forEach(dir => {
