@@ -2,6 +2,7 @@ import inquirer from 'inquirer';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import { config as loadDotenv } from 'dotenv';
 
 export async function runOnboarding() {
   console.log("========================================");
@@ -26,24 +27,54 @@ export async function runOnboarding() {
       return;
   }
 
-  const answers = await inquirer.prompt([
+  const step1 = await inquirer.prompt([
     {
       type: 'list',
       name: 'provider',
       message: '1. Wähle den LLM Provider:',
       choices: ['openai', 'anthropic', 'gemini', 'ollama', 'moonshot', 'openrouter'],
       default: 'openai'
-    },
+    }
+  ]);
+
+  const provider = step1.provider;
+
+  // Pre-configured models per provider
+  const modelChoices: Record<string, string[]> = {
+      'openai': ['gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo', 'Custom...'],
+      'anthropic': ['claude-3-5-sonnet-20240620', 'claude-3-opus-20240229', 'claude-3-haiku-20240307', 'Custom...'],
+      'gemini': ['gemini-1.5-pro-latest', 'gemini-1.5-flash-latest', 'gemini-pro', 'Custom...'],
+      'moonshot': ['moonshot-v1-8k', 'moonshot-v1-32k', 'moonshot-v1-128k', 'Custom...'],
+      'ollama': ['llama3', 'mistral', 'phi3', 'Custom...'],
+      'openrouter': ['anthropic/claude-3-opus', 'meta-llama/llama-3-70b-instruct', 'Custom...']
+  };
+
+  const step2 = await inquirer.prompt([
     {
-      type: 'input',
-      name: 'model',
-      message: '2. Wähle das Modell (z.B. gpt-4o, claude-3-opus-20240229):',
-      default: 'gpt-4o'
-    },
+      type: 'list',
+      name: 'modelSelection',
+      message: `2. Wähle das Modell für ${provider}:`,
+      choices: modelChoices[provider] || ['Custom...']
+    }
+  ]);
+
+  let model = step2.modelSelection;
+  if (model === 'Custom...') {
+      const step2Custom = await inquirer.prompt([
+          {
+              type: 'input',
+              name: 'customModel',
+              message: 'Bitte gib den exakten Namen des Modells ein:'
+          }
+      ]);
+      model = step2Custom.customModel.trim();
+  }
+
+  const answers = await inquirer.prompt([
     {
       type: 'password',
       name: 'llmKey',
-      message: '3. Gib deinen API-Schlüssel für den Provider ein:',
+      message: `3. Gib deinen API-Schlüssel für ${provider} ein:`,
       mask: '*'
     },
     {
@@ -78,8 +109,8 @@ export async function runOnboarding() {
     "port": 3000
   },
   "llm": {
-    "provider": "${answers.provider}",
-    "model": "${answers.model}",
+    "provider": "${provider}",
+    "model": "${model}",
     "apiKey": {
       "type": "SecretRef",
       "method": "env",
@@ -98,6 +129,10 @@ export async function runOnboarding() {
 
   const envPath = path.join(__dirname, '../.env');
   fs.writeFileSync(envPath, envContent, 'utf-8');
+
+  // CRITICAL: Reload the environment variables into the current Node process memory
+  // so the immediate "Hatch" local chat does not fail with "Environment variable not found".
+  loadDotenv({ path: envPath, override: true });
 
   console.log("\n✅ Setup abgeschlossen!");
   console.log(`- Konfiguration gespeichert in: ${configPath}`);
