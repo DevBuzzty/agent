@@ -1,41 +1,31 @@
 {
-  "name": "app",
+  "name": "ai-agent-gateway",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Ein hochsicherer, persistenter Node.js Hintergrundprozess, der als zentrales Gateway für KI-Agenten fungiert.",
+  "main": "dist/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/DevBuzzty/agent.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/DevBuzzty/agent/issues"
-  },
-  "homepage": "https://github.com/DevBuzzty/agent#readme",
-  "devDependencies": {
-    "@types/node": "^25.3.3",
-    "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.78.0",
-    "@google/generative-ai": "^0.24.1",
-    "@types/turndown": "^5.0.6",
-    "chokidar": "^5.0.0",
-    "dotenv": "^17.3.1",
+    "@anthropic-ai/sdk": "^0.36.1",
+    "@google/generative-ai": "^0.22.0",
+    "chokidar": "^4.0.3",
+    "dotenv": "^16.4.7",
     "json5": "^2.2.3",
-    "mathjs": "^15.1.1",
-    "openai": "^6.25.0",
-    "puppeteer": "^24.37.5",
+    "mathjs": "^14.2.1",
+    "openai": "^4.85.3",
+    "puppeteer": "^24.2.1",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7",
     "telegraf": "^4.16.3",
-    "turndown": "^7.2.2"
+    "turndown": "^7.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "@types/turndown": "^5.0.5",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
   }
 }
