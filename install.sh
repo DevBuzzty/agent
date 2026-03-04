@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -e
 
 # Parse arguments for update mode
 UPDATE_MODE=false
@@ -36,11 +37,19 @@ if [ "$HAS_GIT" = "no" ]; then
     exit 1
 fi
 
+TARGET_DIR="ai-agent-gateway"
+
 # Clone vs Pull
-if [ ! -f "package.json" ]; then
-    echo "📥 Klone Repository..."
-    git clone https://github.com/DevBuzzty/agent.git .
-elif [ "$UPDATE_MODE" = true ]; then
+if [ "$UPDATE_MODE" = false ] && [ ! -d "$TARGET_DIR" ] && [ ! -f "package.json" ]; then
+    echo "📥 Klone Repository in den Ordner '$TARGET_DIR'..."
+    git clone https://github.com/DevBuzzty/agent.git "$TARGET_DIR"
+    cd "$TARGET_DIR"
+elif [ -d "$TARGET_DIR" ]; then
+    echo "📂 Wechsle in den Projektordner '$TARGET_DIR'..."
+    cd "$TARGET_DIR"
+fi
+
+if [ "$UPDATE_MODE" = true ]; then
     echo "🔄 Lade neusten Code von GitHub (git pull)..."
     git fetch origin
     # Fallback to the current branch being used in development
