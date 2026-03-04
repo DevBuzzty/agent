@@ -101,7 +101,8 @@ async function bootstrap() {
         await responsePath.logTranscript(routeContext.sessionId, entry);
       };
 
-      const agenticLoop = new AgenticLoop(agentRunner, stepLogger, pathResolver, routeContext.sessionId);
+      const braveApiKey = process.env.BRAVE_API_KEY;
+      const agenticLoop = new AgenticLoop(agentRunner, stepLogger, pathResolver, routeContext.sessionId, braveApiKey);
 
       const db = await getDb();
       const history = await db.all(

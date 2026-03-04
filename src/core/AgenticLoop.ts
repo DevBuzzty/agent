@@ -11,6 +11,7 @@ import { WebFetchTool } from '../tools/WebFetchTool';
 import { SessionsSpawnTool } from '../tools/SessionsSpawnTool';
 import { SessionsHistoryTool } from '../tools/SessionsHistoryTool';
 import { LoopDetectionTool } from '../tools/LoopDetectionTool';
+import { BraveSearchTool } from '../tools/BraveSearchTool';
 import { LoopDetector } from './LoopDetector';
 
 export interface ToolResult {
@@ -26,7 +27,7 @@ export class AgenticLoop {
   private stepLogger: StepLogger;
   private loopDetector: LoopDetector;
 
-  constructor(runner: AgentRunner, stepLogger: StepLogger, pathResolver: SecurePathResolver, sessionId: string) {
+  constructor(runner: AgentRunner, stepLogger: StepLogger, pathResolver: SecurePathResolver, sessionId: string, braveApiKey?: string) {
     this.runner = runner;
     this.stepLogger = stepLogger;
     this.loopDetector = new LoopDetector();
@@ -38,7 +39,8 @@ export class AgenticLoop {
         new WebFetchTool(),
         new SessionsSpawnTool(),
         new SessionsHistoryTool(sessionId),
-        new LoopDetectionTool(this.loopDetector)
+        new LoopDetectionTool(this.loopDetector),
+        new BraveSearchTool(braveApiKey || 'DUMMY_KEY')
     ];
 
     for (const tool of toolsList) {

@@ -33,49 +33,27 @@ Dieses Gateway ist extrem gehärtet gegen RCE (Remote Code Execution), Datenexfi
 - **Docker**: (Optional, aber empfohlen) Für die Micro Virtual Container Sandboxes.
 - **Chrome/Chromium**: Erforderlich, wenn das `browser_control` Werkzeug genutzt werden soll.
 
-### 1. Abhängigkeiten installieren
-Führe diesen Befehl aus:
-`npm install`
+### Automatisches Setup (One-Liner)
+Das System kann mit einem einzigen Befehl vollständig installiert und konfiguriert werden. Lade das Projekt herunter, kompiliere es und starte direkt das interaktive Onboarding im Terminal:
 
-### 2. Projekt kompilieren
-Kompiliere den TypeScript-Code nach JavaScript:
-`npm run build`
-
-### 3. Konfiguration erstellen
-Das Projekt erfordert eine `config.json5` im Root-Verzeichnis. Nutze das `SecretRef`-Paradigma, um Passwörter sicher bereitzustellen!
-
-Erstelle eine `config.json5`:
-```json5
-{
-  "server": {
-    "host": "127.0.0.1",
-    "port": 3000
-  },
-  "llm": {
-    // Unterstützt: openai, anthropic, gemini, ollama, moonshot, openrouter
-    "provider": "openai",
-    "model": "gpt-4",
-    // Beispiel: API Key dynamisch über eine Umgebungsvariable laden
-    "apiKey": {
-      "type": "SecretRef",
-      "method": "env",
-      "value": "OPENAI_API_KEY"
-    }
-  }
-}
+```bash
+curl -fsSL https://raw.githubusercontent.com/.../install.sh | bash
 ```
 
-Zusätzlich kann eine `.env` Datei genutzt werden:
-```env
-TELEGRAM_BOT_TOKEN="DEIN_TELEGRAM_TOKEN"
-OPENAI_API_KEY="sk-..."
-WEBHOOK_SECRET="DeinGeheimesWebhookPasswort123"
-```
+*Das interaktive Onboarding fragt alle notwendigen Einstellungen ab (Modell, Provider, API Keys) und generiert vollautomatisch die sichere `config.json5` und `.env` Dateien unter strenger Einhaltung des `SecretRef`-Paradigmas.*
 
-### 4. Prozess starten
-Starte den Gateway Server:
-`npm start` oder `npm run dev` für die lokale Entwicklung via tsx.
-*Der Server lauscht nun auf 127.0.0.1:3000.*
+### Alternativ: Manuelle Installation
+
+1. Abhängigkeiten installieren: `npm install`
+2. Projekt kompilieren: `npm run build`
+3. Interaktives Onboarding ausführen: `node dist/onboarding.js`
+
+### Prozess starten
+Nach erfolgreichem Setup startest du den Gateway Server:
+```bash
+npm start
+```
+*Der Server lauscht nun isoliert auf 127.0.0.1:3000.*
 
 ---
 
@@ -83,7 +61,8 @@ Starte den Gateway Server:
 
 Das Gateway injiziert hochspezialisierte Werkzeuge in den LLM-Kontext (via System Prompt & deterministischem JSON-Schema):
 
-1. **`exec`**: Führt Shell-Kommandos aus. Bietet PTY-Unterstützung (Pseudo-Terminal) und `background: true` für das asynchrone Entkoppeln von Langläufern. *(Host-Abhängig, durch Secure-by-Default geschützt).*
+1. **`brave_search`**: Integrierte Echtzeit-Websuche via Brave Search API! Ermöglicht der KI, hochaktuelle Informationen, News und Snippets abzurufen. (Ein API Key kann im Onboarding festgelegt werden).
+2. **`exec`**: Führt Shell-Kommandos aus. Bietet PTY-Unterstützung (Pseudo-Terminal) und `background: true` für das asynchrone Entkoppeln von Langläufern. *(Host-Abhängig, durch Secure-by-Default geschützt).*
 2. **`loop_detection`**: Algorithmische Leitplanke! Blockiert das Modell bei unendlichen Schleifen (`genericRepeat`, `knownPollNoProgress`, `pingPong`) mit harten Fehlermeldungen, um Strategiewechsel zu erzwingen.
 3. **`browser_control`**: Steuert Browser via CDP (Chrome DevTools Protocol). Übermittelt token-effiziente *Accessibility Trees* statt riesiger HTML-Dokumente und unterstützt isolierte Profile (`profileId`).
 4. **`web_fetch`**: Lädt Webseiten herunter, konvertiert HTML on-the-fly zu Markdown und schneidet den Text bei einem definierten Zeichenlimit (`maxChars`) ab (Context Bloat Schutz).
