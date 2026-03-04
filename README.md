@@ -37,7 +37,7 @@ Dieses Gateway ist extrem gehärtet gegen RCE (Remote Code Execution), Datenexfi
 Das System kann mit einem einzigen Befehl vollständig installiert und konfiguriert werden. Lade das Projekt herunter, kompiliere es und installiere das globale Kommandozeilen-Tool `chyi`:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/dein-repo/ai-agent-gateway/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/DevBuzzty/agent/refs/heads/feature/ai-gateway-architecture-15263833713041301073/install.sh | bash
 ```
 
 *Das interaktive Onboarding (`chyi config`) fragt alle notwendigen Einstellungen ab (Modell, Provider, API Keys) und generiert vollautomatisch die sichere `config.json5` und `.env` Dateien unter strenger Einhaltung des `SecretRef`-Paradigmas.*
