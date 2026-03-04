@@ -64,7 +64,7 @@ export async function runOnboarding() {
           {
               type: 'input',
               name: 'customModel',
-              message: 'Bitte gib den exakten Namen des Modells ein:'
+              message: 'Bitte gib den exakten Namen des Modells ein (z.B. gpt-4o, claude-3):'
           }
       ]);
       model = step2Custom.customModel.trim();
