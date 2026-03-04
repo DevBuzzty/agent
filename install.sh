@@ -1,7 +1,21 @@
 #!/usr/bin/env bash
 
+# Parse arguments for update mode
+UPDATE_MODE=false
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        --update) UPDATE_MODE=true ;;
+        *) echo "Unknown parameter passed: $1"; exit 1 ;;
+    esac
+    shift
+done
+
 echo "========================================"
-echo "🛡️  AI Agent Gateway - One-Liner Installer"
+if [ "$UPDATE_MODE" = true ]; then
+  echo "🛡️  AI Agent Gateway - Auto Updater"
+else
+  echo "🛡️  AI Agent Gateway - One-Liner Installer"
+fi
 echo "========================================"
 
 HAS_NODE=$(command -v node >/dev/null 2>&1 && echo "yes" || echo "no")
@@ -22,9 +36,16 @@ if [ "$HAS_GIT" = "no" ]; then
     exit 1
 fi
 
+# Clone vs Pull
 if [ ! -f "package.json" ]; then
     echo "📥 Klone Repository..."
-    git clone https://github.com/your-repo/ai-agent-gateway.git .
+    git clone https://github.com/DevBuzzty/agent.git .
+elif [ "$UPDATE_MODE" = true ]; then
+    echo "🔄 Lade neusten Code von GitHub (git pull)..."
+    git fetch origin
+    # Fallback to the current branch being used in development
+    CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "feature/ai-gateway-architecture-15263833713041301073")
+    git pull origin "$CURRENT_BRANCH"
 fi
 
 echo "📦 Installiere Abhängigkeiten (npm install)..."
@@ -36,10 +57,24 @@ npm run build --silent
 echo "🔗 Verlinke globales Command 'chyi'..."
 npm link
 
-echo "✅ Installation erfolgreich abgeschlossen."
-echo ""
-echo "Starte das chyi-Setup..."
+if [ "$UPDATE_MODE" = true ]; then
+  echo "✅ Update erfolgreich abgeschlossen!"
+  echo "Deine config.json5 und .env Dateien bleiben unangetastet."
 
-# Redirect stdin from tty to allow interactive readline inside a curl | bash pipe
-exec < /dev/tty
-chyi config
+  # Restart daemon if it was running
+  if [ -f "gateway.pid" ]; then
+      echo "🔄 Starte laufenden Gateway Prozess neu..."
+      chyi stop
+      chyi start
+  else
+      echo "ℹ️ Gateway läuft aktuell nicht. Starte mit 'chyi start'."
+  fi
+else
+  echo "✅ Installation erfolgreich abgeschlossen."
+  echo ""
+  echo "Starte das chyi-Setup..."
+
+  # Redirect stdin from tty to allow interactive readline inside a curl | bash pipe
+  exec < /dev/tty
+  chyi config
+fi

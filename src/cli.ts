@@ -117,4 +117,26 @@ program
     });
   });
 
+program
+  .command('update')
+  .description('Download and install the latest updates for the AI Agent Gateway')
+  .action(() => {
+    console.log("[chyi] Initiating safe auto-update process...");
+
+    // Determine the root directory of the globally installed chyi package
+    const rootDir = path.join(__dirname, '..');
+
+    // We execute the raw install.sh script directly from GitHub, passing the --update flag.
+    // This allows the script to safely pull the latest git branch, recompile, and preserve the user's config.json5/.env files.
+    const updateCommand = 'curl -fsSL https://raw.githubusercontent.com/DevBuzzty/agent/refs/heads/feature/ai-gateway-architecture-15263833713041301073/install.sh | bash -s -- --update';
+
+    try {
+      // It is CRITICAL to set the cwd to the actual installation directory,
+      // because chyi can be called from anywhere by the user via global symlink.
+      execSync(updateCommand, { stdio: 'inherit', cwd: rootDir });
+    } catch (e: any) {
+      console.error(`[chyi] Update failed. Error: ${e.message}`);
+    }
+  });
+
 program.parse(process.argv);

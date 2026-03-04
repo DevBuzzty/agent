@@ -4,3 +4,9 @@ npm-debug.log
 dist/
 *.sqlite
 *.sqlite-journal
+config.json5
+.env
+database.sqlite
+gateway.pid
+gateway.log
+agent_workspace/

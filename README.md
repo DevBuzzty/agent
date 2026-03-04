@@ -60,6 +60,7 @@ Die Bedienung des Gateways erfolgt bequem über das Terminal mit dem `chyi` Comm
 - `chyi stop`   : Beendet den aktuell laufenden Gateway-Daemon.
 - `chyi status` : Prüft, ob der Gateway-Prozess online ist und zeigt die zugehörige PID an.
 - `chyi logs`   : Zeigt den Live-Stream (Tail) der Gateway-Hintergrundlogs an.
+- `chyi update` : Lädt und installiert automatisch den aktuellsten Code, ohne die persönlichen Konfigurationen zu überschreiben. Startet das Gateway ggf. neu.
 
 ---
 
