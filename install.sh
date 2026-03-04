@@ -58,21 +58,17 @@ if [ "$UPDATE_MODE" = true ]; then
 fi
 
 echo "📦 Installiere Abhängigkeiten (npm install)..."
-npm install --silent
+npm install
 
 echo "⚙️  Kompiliere TypeScript (npm run build)..."
-npm run build --silent
-
-# Wir brauchen ab hier den TTY Zugang, falls npm link sudo-Rechte benötigt
-# oder für das interaktive Inquirer-Setup im Anschluss.
-exec < /dev/tty
+npm run build
 
 echo "🔗 Verlinke globales Command 'chyi'..."
 # Handle permissions error on global npm installations (EACCES)
 if ! npm link; then
     echo "⚠️  Fehlende Schreibrechte für globale NPM Module entdeckt (EACCES)."
     echo "🔧 Versuche Verlinkung mit 'sudo' (du wirst evtl. nach deinem Passwort gefragt)..."
-    sudo npm link
+    sudo npm link < /dev/tty
 fi
 
 if [ "$UPDATE_MODE" = true ]; then
@@ -92,5 +88,6 @@ else
   echo ""
   echo "Starte das chyi-Setup..."
 
-  chyi config
+  # Bind input to TTY explicitly for the interactive UI
+  chyi config < /dev/tty
 fi
