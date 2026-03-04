@@ -34,26 +34,32 @@ Dieses Gateway ist extrem gehärtet gegen RCE (Remote Code Execution), Datenexfi
 - **Chrome/Chromium**: Erforderlich, wenn das `browser_control` Werkzeug genutzt werden soll.
 
 ### Automatisches Setup (One-Liner)
-Das System kann mit einem einzigen Befehl vollständig installiert und konfiguriert werden. Lade das Projekt herunter, kompiliere es und starte direkt das interaktive Onboarding im Terminal:
+Das System kann mit einem einzigen Befehl vollständig installiert und konfiguriert werden. Lade das Projekt herunter, kompiliere es und installiere das globale Kommandozeilen-Tool `chyi`:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/.../install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/dein-repo/ai-agent-gateway/main/install.sh | bash
 ```
 
-*Das interaktive Onboarding fragt alle notwendigen Einstellungen ab (Modell, Provider, API Keys) und generiert vollautomatisch die sichere `config.json5` und `.env` Dateien unter strenger Einhaltung des `SecretRef`-Paradigmas.*
+*Das interaktive Onboarding (`chyi config`) fragt alle notwendigen Einstellungen ab (Modell, Provider, API Keys) und generiert vollautomatisch die sichere `config.json5` und `.env` Dateien unter strenger Einhaltung des `SecretRef`-Paradigmas.*
 
 ### Alternativ: Manuelle Installation
 
 1. Abhängigkeiten installieren: `npm install`
 2. Projekt kompilieren: `npm run build`
-3. Interaktives Onboarding ausführen: `node dist/onboarding.js`
+3. CLI Tool global verlinken: `npm link`
+4. Setup starten: `chyi config`
 
-### Prozess starten
-Nach erfolgreichem Setup startest du den Gateway Server:
-```bash
-npm start
-```
-*Der Server lauscht nun isoliert auf 127.0.0.1:3000.*
+---
+
+## 💻 Das `chyi` Kommandozeilen-Tool
+
+Die Bedienung des Gateways erfolgt bequem über das Terminal mit dem `chyi` Command:
+
+- `chyi config` : Startet das interaktive Setup-Menü, um API Schlüssel, LLM Provider und Modelle anzupassen.
+- `chyi start`  : Startet den Gateway-Daemon sicher und entkoppelt im Hintergrund.
+- `chyi stop`   : Beendet den aktuell laufenden Gateway-Daemon.
+- `chyi status` : Prüft, ob der Gateway-Prozess online ist und zeigt die zugehörige PID an.
+- `chyi logs`   : Zeigt den Live-Stream (Tail) der Gateway-Hintergrundlogs an.
 
 ---
 

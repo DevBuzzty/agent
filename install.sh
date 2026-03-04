@@ -33,8 +33,13 @@ npm install --silent
 echo "⚙️  Kompiliere TypeScript (npm run build)..."
 npm run build --silent
 
+echo "🔗 Verlinke globales Command 'chyi'..."
+npm link
+
 echo "✅ Installation erfolgreich abgeschlossen."
 echo ""
-echo "Startet das Onboarding..."
+echo "Starte das chyi-Setup..."
 
-node dist/onboarding.js
+# Redirect stdin from tty to allow interactive readline inside a curl | bash pipe
+exec < /dev/tty
+chyi config

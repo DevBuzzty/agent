@@ -3,18 +3,18 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
+export async function runOnboarding() {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
 
-const ask = (question: string): Promise<string> => {
-  return new Promise((resolve) => rl.question(question, resolve));
-};
+  const ask = (question: string): Promise<string> => {
+    return new Promise((resolve) => rl.question(question, resolve));
+  };
 
-async function runOnboarding() {
   console.log("========================================");
-  console.log("🚀 AI Agent Gateway - Setup Onboarding");
+  console.log("🚀 CHYI CLI - Interactive Setup");
   console.log("========================================\n");
 
   const provider = await ask("1. Wähle den LLM Provider (openai, anthropic, gemini, ollama, moonshot, openrouter) [openai]: ");
@@ -65,9 +65,12 @@ async function runOnboarding() {
   console.log("\n✅ Setup abgeschlossen!");
   console.log(`- Konfiguration gespeichert in: ${configPath}`);
   console.log(`- API Keys sicher ausgelagert in: ${envPath}`);
-  console.log("\nDu kannst den Gateway-Server nun starten mit: npm start");
+  console.log("\nDu kannst den Gateway-Server nun starten mit: chyi start");
 
   rl.close();
 }
 
-runOnboarding().catch(console.error);
+// Fallback execution if run directly
+if (require.main === module) {
+  runOnboarding().catch(console.error);
+}
