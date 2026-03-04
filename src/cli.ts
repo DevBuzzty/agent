@@ -1,8 +1,12 @@
 #!/usr/bin/env node
+import { config } from 'dotenv';
 import { Command } from 'commander';
 import { spawn, execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+
+// Load environment variables for the CLI commands (especially the Hatch Chat)
+config({ path: path.join(__dirname, '../.env') });
 
 const program = new Command();
 const PID_FILE = path.join(__dirname, '../gateway.pid');

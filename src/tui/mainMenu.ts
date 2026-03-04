@@ -25,7 +25,7 @@ export async function showMainMenu() {
         { name: '💬 Terminal Chat & Bootstrap (Hatch)', value: 'chat' },
         { name: '🧠 Wissensmodul-Generator (Knowledge)', value: 'knowledge' },
         { name: '🛡️  Security & Policy Dashboard', value: 'security' },
-        { name: '⚙️  Konfiguration (Onboarding)', value: 'config' },
+        { name: '⚙️  Konfiguration (Onboarding & Reset)', value: 'config' },
         new inquirer.Separator(),
         { name: '🔄 System Updaten', value: 'update' },
         { name: '🚪 Beenden', value: 'exit' }

@@ -8,6 +8,24 @@ export async function runOnboarding() {
   console.log("🚀 CHYI CLI - Interactive Configuration");
   console.log("========================================\n");
 
+  const { mode } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'mode',
+      message: 'Was möchtest du tun?',
+      choices: [
+        { name: '✨ Neues Setup / Konfiguration ändern', value: 'setup' },
+        { name: '⚠️  System Reset / Wipe', value: 'reset' }
+      ]
+    }
+  ]);
+
+  if (mode === 'reset') {
+      const { runResetWizard } = await import('./tui/resetWizard');
+      await runResetWizard();
+      return;
+  }
+
   const answers = await inquirer.prompt([
     {
       type: 'list',
