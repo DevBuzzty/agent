@@ -102,7 +102,7 @@ async function bootstrap() {
       };
 
       const braveApiKey = process.env.BRAVE_API_KEY;
-      const agenticLoop = new AgenticLoop(agentRunner, stepLogger, pathResolver, routeContext.sessionId, braveApiKey);
+      const agenticLoop = new AgenticLoop(agentRunner, stepLogger, pathResolver, routeContext.sessionId, braveApiKey, sandboxId);
 
       const db = await getDb();
       const history = await db.all(

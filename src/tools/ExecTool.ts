@@ -29,6 +29,13 @@ export class ExecTool extends BaseTool<ExecArgs> {
 
   private backgroundProcesses: Map<number, ChildProcess> = new Map();
 
+  private sandboxId?: string;
+
+  constructor(sandboxId?: string) {
+    super();
+    this.sandboxId = sandboxId;
+  }
+
   async execute(args: ExecArgs): Promise<string> {
     if (!globalSecurityManager.canAccessShell()) {
       return "Error: Shell access is explicitly denied by the 'Secure-by-Default' policy.";
@@ -36,17 +43,26 @@ export class ExecTool extends BaseTool<ExecArgs> {
 
     const runBackground = args.background || false;
     const commandArgs = args.args || [];
-
-    // In a real environment, node-pty would be used here. For this environment,
-    // we simulate the pty flag visually and use native spawn.
     const usePty = args.pty || false;
+
+    // True Docker Sandbox Execution
+    // If a sandboxId is provided, we route the execution INTO the isolated container
+    // rather than running it natively on the host machine.
+    let spawnCmd = args.command;
+    let spawnArgs = commandArgs;
+
+    if (this.sandboxId) {
+        spawnCmd = 'docker';
+        const fullInnerCmd = `${args.command} ${commandArgs.join(' ')}`;
+        spawnArgs = ['exec', '-i', `sandbox_${this.sandboxId}`, 'sh', '-c', fullInnerCmd];
+    }
 
     return new Promise((resolve) => {
       try {
-        const childProc = spawn(args.command, commandArgs, {
+        const childProc = spawn(spawnCmd, spawnArgs, {
           cwd: process.cwd(),
           env: process.env,
-          shell: usePty // basic simulation of a terminal context
+          shell: this.sandboxId ? false : usePty
         });
 
         if (runBackground && childProc.pid) {

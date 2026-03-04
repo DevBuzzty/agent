@@ -31,19 +31,22 @@ export class LaneQueue {
 
     const queue = this.queues.get(sessionId);
 
-    while (queue && queue.length > 0) {
-      const currentTask = queue.shift();
-      if (currentTask) {
-        try {
-          await currentTask();
-        } catch (error) {
-          console.error(`[LaneQueue] Task execution failed in session ${sessionId}:`, error);
-          // In a real production system, you might want to retry, alert, or pause the queue.
+    try {
+      while (queue && queue.length > 0) {
+        const currentTask = queue.shift();
+        if (currentTask) {
+          try {
+            await currentTask();
+          } catch (error) {
+            console.error(`[LaneQueue] Task execution failed in session ${sessionId}:`, error);
+            // Prevents a single failing task from silently stopping the queue loop execution
+          }
         }
       }
+    } finally {
+      // Guaranteed cleanup even if an unexpected synchronous exception breaks the loop
+      this.processing.delete(sessionId);
     }
-
-    this.processing.delete(sessionId);
 
     // Clean up empty queue map
     if (queue && queue.length === 0) {

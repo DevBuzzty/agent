@@ -12,6 +12,11 @@ export const getDb = async () => {
     driver: sqlite3.Database
   });
 
+  // Enable Write-Ahead Logging (WAL) for high concurrency and reliability
+  // This prevents SQLITE_BUSY locking errors during parallel webhook ingestion
+  await db.exec('PRAGMA journal_mode = WAL;');
+  await db.exec('PRAGMA synchronous = NORMAL;');
+
   return db;
 };
 

@@ -27,14 +27,14 @@ export class AgenticLoop {
   private stepLogger: StepLogger;
   private loopDetector: LoopDetector;
 
-  constructor(runner: AgentRunner, stepLogger: StepLogger, pathResolver: SecurePathResolver, sessionId: string, braveApiKey?: string) {
+  constructor(runner: AgentRunner, stepLogger: StepLogger, pathResolver: SecurePathResolver, sessionId: string, braveApiKey?: string, sandboxId?: string) {
     this.runner = runner;
     this.stepLogger = stepLogger;
     this.loopDetector = new LoopDetector();
 
     // Register native First-Class Tools
     const toolsList: FirstClassTool[] = [
-        new ExecTool(),
+        new ExecTool(sandboxId),
         new BrowserTool(),
         new WebFetchTool(),
         new SessionsSpawnTool(),

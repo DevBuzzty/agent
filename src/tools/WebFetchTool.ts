@@ -36,11 +36,9 @@ export class WebFetchTool extends BaseTool<WebFetchArgs> {
       // Convert HTML to Markdown on-the-fly
       const markdown = this.turndownService.turndown(html);
 
-      // Protect against Context Overflow
-      if (markdown.length > limit) {
-        return markdown.substring(0, limit) + `\n\n[TRUNCATED]: Reached maxChars limit of ${limit}.`;
-      }
-      return markdown;
+      // Protect against Context Overflow using intelligent middle truncation
+      const { TokenOptimizer } = require('../core/TokenOptimizer');
+      return TokenOptimizer.truncateMiddle(markdown, limit);
     } catch (e: any) {
       return `Error fetching or parsing URL: ${e.message}`;
     }

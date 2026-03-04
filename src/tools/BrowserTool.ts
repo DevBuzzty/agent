@@ -82,10 +82,12 @@ export class BrowserTool extends BaseTool<BrowserArgs> {
   }
 
   private simplifyAXTree(nodes: any[]): string {
-    return nodes
+    const rawText = nodes
       .filter(n => n.role && n.role.value && n.name && n.name.value)
       .map(n => `[${n.role.value}] ${n.name.value}`)
-      .join('\n')
-      .slice(0, 4000); // Hard character limit for safety
+      .join('\n');
+
+    const { TokenOptimizer } = require('../core/TokenOptimizer');
+    return TokenOptimizer.truncateMiddle(rawText, 4000);
   }
 }
