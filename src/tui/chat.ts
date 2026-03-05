@@ -90,15 +90,35 @@ Halte dich unter allen Umständen an diese Persona.
 
   const agenticLoop = new AgenticLoop(runner, silentLogger, pathResolver, sessionId, process.env.BRAVE_API_KEY);
 
-  console.log("\n🚀 Chat gestartet. (Tippe 'exit' oder 'quit' zum Beenden)\n");
+  const clc = require('cli-color');
+
+  console.log(clc.bold.cyan("\n🚀 Chat gestartet. (Tippe 'exit' oder 'quit' zum Beenden)"));
+  console.log(clc.blackBright("------------------------------------------------------------\n"));
 
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
   });
 
+  // Native dynamic spinner
+  let spinnerInterval: NodeJS.Timeout;
+  const startSpinner = () => {
+    const frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+    let i = 0;
+    spinnerInterval = setInterval(() => {
+      process.stdout.write(`\r${clc.magenta(frames[i])} ${clc.italic('Agent denkt nach...')} `);
+      i = (i + 1) % frames.length;
+    }, 80);
+  };
+
+  const stopSpinner = () => {
+    clearInterval(spinnerInterval);
+    process.stdout.write('\r\x1b[K'); // clear the line
+  };
+
   const askUser = () => {
-    rl.question('\nDu: ', async (input) => {
+    // Print user prompt with color separation
+    rl.question(clc.cyan.bold('Du: '), async (input) => {
       if (input.toLowerCase() === 'exit' || input.toLowerCase() === 'quit') {
         rl.close();
         return;
@@ -116,7 +136,7 @@ Halte dich unter allen Umständen an diese Persona.
         [messageId, sessionId, 'user', input]
       );
 
-      process.stdout.write('Bot denkt nach... ');
+      startSpinner();
 
       const history = await db.all(
         `SELECT role, content FROM messages WHERE session_id = ? ORDER BY timestamp ASC`,
@@ -127,12 +147,14 @@ Halte dich unter allen Umständen an diese Persona.
 
       try {
           const response = await agenticLoop.start(sessionId, messages);
-          // clear "denkt nach..."
-          process.stdout.write('\r\x1b[K');
-          console.log(`Bot: ${response}`);
+          stopSpinner();
+
+          console.log(clc.magenta.bold('\nAgent: ') + response);
+          console.log(clc.blackBright("------------------------------------------------------------\n"));
       } catch (err: any) {
-          process.stdout.write('\r\x1b[K');
-          console.log(`[Fehler] ${err.message}`);
+          stopSpinner();
+          console.log(clc.red.bold(`\n[Fehler] `) + err.message);
+          console.log(clc.blackBright("------------------------------------------------------------\n"));
       }
 
       askUser();

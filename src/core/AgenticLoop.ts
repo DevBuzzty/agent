@@ -77,7 +77,8 @@ export class AgenticLoop {
 
         const guardrailError = this.loopDetector.evaluate(response.toolCalls);
         if (guardrailError) {
-             console.warn(`[Guardrail Triggered]: ${guardrailError}`);
+             // Intentionally silencing the console.warn here to prevent polluting the TUI chat.
+             // The error is still injected into the LLM context silently.
              currentMessages.push({
                  role: 'system',
                  content: guardrailError
