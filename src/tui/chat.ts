@@ -44,6 +44,16 @@ function formatMarkdownForTerminal(text: string, clc: any): string {
   return formatted;
 }
 
+function applyBotMessageStyle(text: string, clc: any): string {
+  // Apply a subtle gray background to the entire bot message block.
+  // We process it line by line to ensure the background stretches correctly
+  // and add a small left-padding for a "bubble" effect.
+  return text.split('\n').map(line => {
+      // bgBlackBright or bgBlack creates a subtle gray background on most terminals
+      return clc.bgBlack(` ${line} `);
+  }).join('\n');
+}
+
 export async function runTerminalChat() {
   // __dirname in dist/tui is two levels down from root
   const rootDir = path.join(__dirname, '../../');
@@ -202,8 +212,10 @@ Halte dich unter allen Umständen an diese Persona.
           const response = await agenticLoop.start(sessionId, messages);
           stopSpinner();
 
-          const formattedResponse = formatMarkdownForTerminal(response, clc);
-          console.log(clc.magenta.bold('\nAgent: ') + formattedResponse);
+          let formattedResponse = formatMarkdownForTerminal(response, clc);
+          formattedResponse = applyBotMessageStyle(formattedResponse, clc);
+
+          console.log(clc.magenta.bold('\nAgent:\n') + formattedResponse + '\n');
           console.log(clc.blackBright("------------------------------------------------------------\n"));
       } catch (err: any) {
           stopSpinner();
