@@ -11,7 +11,7 @@ export async function runOnboarding() {
 
   const { mode } = await inquirer.prompt([
     {
-      type: 'list',
+      type: 'list', loop: false,
       name: 'mode',
       message: 'Was möchtest du tun?',
       choices: [
@@ -29,7 +29,7 @@ export async function runOnboarding() {
 
   const step1 = await inquirer.prompt([
     {
-      type: 'list',
+      type: 'list', loop: false,
       name: 'provider',
       message: '1. Wähle den LLM Provider:',
       choices: ['openai', 'anthropic', 'gemini', 'ollama', 'moonshot', 'openrouter'],
@@ -51,7 +51,7 @@ export async function runOnboarding() {
 
   const step2 = await inquirer.prompt([
     {
-      type: 'list',
+      type: 'list', loop: false,
       name: 'modelSelection',
       message: `2. Wähle das Modell für ${provider}:`,
       choices: modelChoices[provider] || ['Custom...']

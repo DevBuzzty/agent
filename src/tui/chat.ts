@@ -92,7 +92,8 @@ Halte dich unter allen Umständen an diese Persona.
 
   const clc = require('cli-color');
 
-  console.log(clc.bold.cyan("\n🚀 Chat gestartet. (Tippe 'exit' oder 'quit' zum Beenden)"));
+  console.log(clc.bold.cyan("\n🚀 Chat gestartet. (Tippe 'exit' oder '/exit' zum Beenden)"));
+  console.log(clc.italic.green("ℹ️  Tipp: Beginne eine Nachricht mit '/', um lokale Terminal- oder chyi-Befehle direkt auszuführen (z.B. '/ls -la' oder '/chyi status')."));
   console.log(clc.blackBright("------------------------------------------------------------\n"));
 
   const rl = readline.createInterface({
@@ -119,14 +120,33 @@ Halte dich unter allen Umständen an diese Persona.
   const askUser = () => {
     // Print user prompt with color separation
     rl.question(clc.cyan.bold('Du: '), async (input) => {
-      if (input.toLowerCase() === 'exit' || input.toLowerCase() === 'quit') {
+      if (input.toLowerCase() === 'exit' || input.toLowerCase() === 'quit' || input.toLowerCase() === '/exit') {
         rl.close();
+        console.log(clc.yellow("\nChat beendet. Das Gateway läuft (sofern gestartet) im Hintergrund weiter.\n"));
         return;
       }
 
       if (!input.trim()) {
           askUser();
           return;
+      }
+
+      // Handle Slash Commands (Local System Execution)
+      if (input.startsWith('/')) {
+        const cmd = input.slice(1).trim();
+        if (cmd) {
+            console.log(clc.blackBright("--- Lokale Ausführung ---"));
+            try {
+                // Execute command synchronously so the output appears right away
+                const { execSync } = require('child_process');
+                execSync(cmd, { stdio: 'inherit' });
+            } catch (err: any) {
+                console.log(clc.red(`\nBefehl fehlgeschlagen: ${err.message}`));
+            }
+            console.log(clc.blackBright("-------------------------"));
+        }
+        askUser();
+        return;
       }
 
       const db = await getDb();

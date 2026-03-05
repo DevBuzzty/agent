@@ -126,6 +126,14 @@ program
   });
 
 program
+  .command('clawhub')
+  .description('Import a Skill from Clawhub directly')
+  .action(async () => {
+    const { runClawhubImporter } = await import('./tui/clawhubImporter');
+    await runClawhubImporter();
+  });
+
+program
   .command('security')
   .description('Open the interactive Security & Policy Dashboard')
   .action(async () => {

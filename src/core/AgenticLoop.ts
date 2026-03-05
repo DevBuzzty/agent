@@ -12,7 +12,11 @@ import { SessionsSpawnTool } from '../tools/SessionsSpawnTool';
 import { SessionsHistoryTool } from '../tools/SessionsHistoryTool';
 import { LoopDetectionTool } from '../tools/LoopDetectionTool';
 import { BraveSearchTool } from '../tools/BraveSearchTool';
+import { FileWriterTool } from '../tools/FileWriterTool';
+import { FileEditorTool } from '../tools/FileEditorTool';
+import { ClawhubImportTool } from '../tools/ClawhubImportTool';
 import { LoopDetector } from './LoopDetector';
+import path from 'path';
 
 export interface ToolResult {
   tool_call_id: string;
@@ -33,6 +37,7 @@ export class AgenticLoop {
     this.loopDetector = new LoopDetector();
 
     // Register native First-Class Tools
+    const workspaceDir = path.join(__dirname, '../../knowledge_modules/workspace');
     const toolsList: FirstClassTool[] = [
         new ExecTool(sandboxId),
         new BrowserTool(),
@@ -40,7 +45,10 @@ export class AgenticLoop {
         new SessionsSpawnTool(),
         new SessionsHistoryTool(sessionId),
         new LoopDetectionTool(this.loopDetector),
-        new BraveSearchTool(braveApiKey || 'DUMMY_KEY')
+        new BraveSearchTool(braveApiKey || 'DUMMY_KEY'),
+        new FileWriterTool(pathResolver),
+        new FileEditorTool(pathResolver),
+        new ClawhubImportTool(workspaceDir)
     ];
 
     for (const tool of toolsList) {

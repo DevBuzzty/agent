@@ -13,7 +13,7 @@ export async function showMainMenu() {
 
   const { action } = await inquirer.prompt([
     {
-      type: 'list',
+      type: 'list', loop: false,
       name: 'action',
       message: 'Was möchtest du tun?',
       choices: [
@@ -24,6 +24,7 @@ export async function showMainMenu() {
         new inquirer.Separator(),
         { name: '💬 Terminal Chat & Bootstrap (Hatch)', value: 'chat' },
         { name: '🧠 Wissensmodul-Generator (Knowledge)', value: 'knowledge' },
+        { name: '🧩 Clawhub Skill importieren', value: 'clawhub' },
         { name: '🛡️  Security & Policy Dashboard', value: 'security' },
         { name: '⚙️  Konfiguration (Onboarding & Reset)', value: 'config' },
         new inquirer.Separator(),
@@ -52,6 +53,9 @@ export async function showMainMenu() {
     case 'knowledge':
       await runKnowledgeWizard();
       break;
+    case 'clawhub':
+      try { execSync(`node ${chyiBin} clawhub`, { stdio: 'inherit' }); } catch (e) {}
+      break;
     case 'chat':
       await runTerminalChat();
       break;
@@ -60,7 +64,7 @@ export async function showMainMenu() {
       process.exit(0);
   }
 
-  if (['start', 'stop', 'status', 'update', 'security', 'knowledge'].includes(action)) {
+  if (['start', 'stop', 'status', 'update', 'security', 'knowledge', 'clawhub'].includes(action)) {
       setTimeout(showMainMenu, 1500);
   }
 }
