@@ -12,6 +12,38 @@ import { SecurePathResolver } from '../security/PathResolver';
 import { initDb, getDb } from '../db';
 import { KnowledgeManager } from '../knowledge/KnowledgeManager';
 
+function formatMarkdownForTerminal(text: string, clc: any): string {
+  if (!text) return "";
+
+  let formatted = text;
+
+  // Headers (### Header)
+  formatted = formatted.replace(/^(#{1,6})\s+(.+)$/gm, (match, hashes, content) => {
+      return clc.bold.underline.blueBright(content);
+  });
+
+  // Bold (**text**)
+  formatted = formatted.replace(/\*\*(.*?)\*\*/g, (match, content) => {
+      return clc.bold.white(content);
+  });
+
+  // Italic (*text* or _text_)
+  formatted = formatted.replace(/(?<!\w)([*_])(.*?)\1(?!\w)/g, (match, symbol, content) => {
+      return clc.italic(content);
+  });
+
+  // Inline Code (`code`)
+  formatted = formatted.replace(/`([^`]+)`/g, (match, content) => {
+      return clc.bgBlack.whiteBright(` ${content} `);
+  });
+
+  // Simple bullet points adjustments
+  formatted = formatted.replace(/^(\s*)-\s+/gm, `$1${clc.cyan('•')} `);
+  formatted = formatted.replace(/^(\s*)\*\s+/gm, `$1${clc.cyan('•')} `);
+
+  return formatted;
+}
+
 export async function runTerminalChat() {
   // __dirname in dist/tui is two levels down from root
   const rootDir = path.join(__dirname, '../../');
@@ -69,7 +101,8 @@ Halte dich unter allen Umständen an diese Persona.
     modelName: appConfig?.llm?.model || 'gpt-4',
     apiKey: appConfig?.llm?.apiKey || 'mock',
     maxTokens: 4000,
-    coolingRateMs: 1000
+    coolingRateMs: 1000,
+    silent: true // Mute internal execution logs
   });
 
   const pathResolver = new SecurePathResolver(path.join(rootDir, 'agent_workspace'));
@@ -169,7 +202,8 @@ Halte dich unter allen Umständen an diese Persona.
           const response = await agenticLoop.start(sessionId, messages);
           stopSpinner();
 
-          console.log(clc.magenta.bold('\nAgent: ') + response);
+          const formattedResponse = formatMarkdownForTerminal(response, clc);
+          console.log(clc.magenta.bold('\nAgent: ') + formattedResponse);
           console.log(clc.blackBright("------------------------------------------------------------\n"));
       } catch (err: any) {
           stopSpinner();

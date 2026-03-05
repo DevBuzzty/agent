@@ -11,6 +11,7 @@ export interface LLMConfig {
   apiKey: string;
   maxTokens: number;
   coolingRateMs: number;
+  silent?: boolean;
 }
 
 export interface ModelMessage {
@@ -49,7 +50,9 @@ export class AgentRunner {
     const elapsed = now - this.lastCallTime;
     if (elapsed < this.config.coolingRateMs) {
       const waitTime = this.config.coolingRateMs - elapsed;
-      console.log(`[AgentRunner] Rate limit cooling for ${waitTime}ms...`);
+      if (!this.config.silent) {
+         console.log(`[AgentRunner] Rate limit cooling for ${waitTime}ms...`);
+      }
       await new Promise(resolve => setTimeout(resolve, waitTime));
     }
     this.lastCallTime = Date.now();
@@ -98,7 +101,9 @@ export class AgentRunner {
                   prompt += `\n[Module: ${mod.name}]\nDescription: ${mod.description}\nInstructions:\n${mod.instructions}\n`;
               }
               const overhead = this.knowledgeManager.calculateTokenOverhead();
-              console.log(`[AgentRunner] Injected ${modules.length} knowledge modules. Calculated Overhead: ${overhead} characters.`);
+              if (!this.config.silent) {
+                  console.log(`[AgentRunner] Injected ${modules.length} knowledge modules. Calculated Overhead: ${overhead} characters.`);
+              }
           }
       }
 
@@ -119,7 +124,9 @@ export class AgentRunner {
 
     const contextMessages = this.applyContextWindowManagement(injectedMessages);
 
-    console.log(`[AgentRunner] Running model ${this.config.provider}:${this.config.modelName}`);
+    if (!this.config.silent) {
+        console.log(`[AgentRunner] Running model ${this.config.provider}:${this.config.modelName}`);
+    }
 
     if (this.config.provider === 'openai' || this.config.provider === 'moonshot' || this.config.provider === 'openrouter' || this.config.provider === 'ollama') {
       return this.runOpenAICompatible(contextMessages);
