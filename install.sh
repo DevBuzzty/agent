@@ -66,20 +66,19 @@ else
 fi
 
 echo "📦 Installiere Abhängigkeiten (npm install)..."
-npm install
+# Remove implicit TTY piping that breaks curl | bash script readers.
+npm install < /dev/null
 
 echo "⚙️  Kompiliere TypeScript (npm run build)..."
-npm run build
-
-# Wir brauchen ab hier den TTY Zugang, falls npm link sudo-Rechte benötigt
-# oder für das interaktive Inquirer-Setup im Anschluss.
-exec < /dev/tty
+# By pulling input from /dev/null, it prevents the compiler from waiting on hanging shell IO
+npm run build < /dev/null
 
 echo "🔗 Verlinke globales Command 'chyi'..."
 # Handle permissions error on global npm installations (EACCES)
-if ! npm link; then
+if ! npm link < /dev/null; then
     echo "⚠️  Fehlende Schreibrechte für globale NPM Module entdeckt (EACCES)."
     echo "🔧 Versuche Verlinkung mit 'sudo' (du wirst evtl. nach deinem Passwort gefragt)..."
+    # ONLY map the TTY here so sudo can safely ask for a password without breaking the main script stream
     sudo npm link < /dev/tty
 fi
 
