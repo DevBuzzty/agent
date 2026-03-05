@@ -40,19 +40,29 @@ fi
 TARGET_DIR="ai-agent-gateway"
 
 # Clone vs Pull
-if [ ! -d "$TARGET_DIR" ] && [ ! -f "package.json" ]; then
-    echo "📥 Klone Repository in den Ordner '$TARGET_DIR'..."
-    # Checkout the specific feature branch so we don't accidentally download the outdated 'main' branch
-    git clone -b feature/ai-gateway-architecture-15263833713041301073 https://github.com/DevBuzzty/agent.git "$TARGET_DIR"
-    cd "$TARGET_DIR"
+# If we are already inside the project directory (e.g., during 'chyi update')
+if [ -f "package.json" ] && grep -q "ai-agent-gateway" package.json; then
+    echo "📂 Führe Update im aktuellen Verzeichnis aus..."
+    if [ "$UPDATE_MODE" = true ]; then
+        echo "🔄 Lade neusten Code von GitHub (git pull)..."
+        git fetch origin
+        CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "feature/ai-gateway-architecture-15263833713041301073")
+        git pull origin "$CURRENT_BRANCH"
+    fi
+# If the target directory exists but we are outside of it
 elif [ -d "$TARGET_DIR" ]; then
     echo "📂 Wechsle in den Projektordner '$TARGET_DIR'..."
     cd "$TARGET_DIR"
-    # Even if it's not strictly an update mode run, we fetch the latest commits to ensure the installer doesn't get stuck on old code.
     echo "🔄 Lade neusten Code von GitHub (git pull)..."
     git fetch origin
     CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "feature/ai-gateway-architecture-15263833713041301073")
     git pull origin "$CURRENT_BRANCH"
+# Fresh install
+else
+    echo "📥 Klone Repository in den Ordner '$TARGET_DIR'..."
+    # Checkout the specific feature branch so we don't accidentally download the outdated 'main' branch
+    git clone -b feature/ai-gateway-architecture-15263833713041301073 https://github.com/DevBuzzty/agent.git "$TARGET_DIR"
+    cd "$TARGET_DIR"
 fi
 
 echo "📦 Installiere Abhängigkeiten (npm install)..."

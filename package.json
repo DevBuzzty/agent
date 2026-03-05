@@ -7,7 +7,7 @@
     "chyi": "./dist/cli.js"
   },
   "scripts": {
-    "build": "node --max-old-space-size=2048 ./node_modules/.bin/tsc --skipLibCheck",
+    "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts"
   },

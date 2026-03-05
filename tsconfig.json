@@ -10,5 +10,12 @@
     "skipLibCheck": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "agent_workspace", ".git", "**/*.sqlite", "knowledge_modules"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "agent_workspace",
+    ".git",
+    "**/*.sqlite",
+    "knowledge_modules"
+  ]
 }
