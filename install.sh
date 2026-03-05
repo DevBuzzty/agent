@@ -68,6 +68,9 @@ fi
 echo "📦 Installiere Abhängigkeiten (npm install)..."
 npm install
 
+echo "⚙️  Kompiliere TypeScript (npm run build)..."
+npm run build
+
 # Wir brauchen ab hier den TTY Zugang, falls npm link sudo-Rechte benötigt
 # oder für das interaktive Inquirer-Setup im Anschluss.
 exec < /dev/tty
