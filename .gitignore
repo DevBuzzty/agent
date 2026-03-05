@@ -1,11 +1,9 @@
 node_modules/
 npm-debug.log
 .env
-dist/
 *.sqlite
 *.sqlite-journal
 config.json5
-.env
 database.sqlite
 gateway.pid
 gateway.log
