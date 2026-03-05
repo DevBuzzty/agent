@@ -53,7 +53,8 @@ export class ExecTool extends BaseTool<ExecArgs> {
 
     if (this.sandboxId) {
         spawnCmd = 'docker';
-        const fullInnerCmd = `${args.command} ${commandArgs.join(' ')}`;
+        const safeArgs = commandArgs.map(arg => arg.includes(' ') ? `"${arg.replace(/"/g, '\\"')}"` : arg).join(' ');
+        const fullInnerCmd = `${args.command} ${safeArgs}`;
         spawnArgs = ['exec', '-i', `sandbox_${this.sandboxId}`, 'sh', '-c', fullInnerCmd];
     }
 

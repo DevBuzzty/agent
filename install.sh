@@ -40,19 +40,17 @@ fi
 TARGET_DIR="ai-agent-gateway"
 
 # Clone vs Pull
-if [ "$UPDATE_MODE" = false ] && [ ! -d "$TARGET_DIR" ] && [ ! -f "package.json" ]; then
+if [ ! -d "$TARGET_DIR" ] && [ ! -f "package.json" ]; then
     echo "📥 Klone Repository in den Ordner '$TARGET_DIR'..."
-    git clone https://github.com/DevBuzzty/agent.git "$TARGET_DIR"
+    # Checkout the specific feature branch so we don't accidentally download the outdated 'main' branch
+    git clone -b feature/ai-gateway-architecture-15263833713041301073 https://github.com/DevBuzzty/agent.git "$TARGET_DIR"
     cd "$TARGET_DIR"
 elif [ -d "$TARGET_DIR" ]; then
     echo "📂 Wechsle in den Projektordner '$TARGET_DIR'..."
     cd "$TARGET_DIR"
-fi
-
-if [ "$UPDATE_MODE" = true ]; then
+    # Even if it's not strictly an update mode run, we fetch the latest commits to ensure the installer doesn't get stuck on old code.
     echo "🔄 Lade neusten Code von GitHub (git pull)..."
     git fetch origin
-    # Fallback to the current branch being used in development
     CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "feature/ai-gateway-architecture-15263833713041301073")
     git pull origin "$CURRENT_BRANCH"
 fi
@@ -62,6 +60,10 @@ npm install
 
 echo "⚙️  Kompiliere TypeScript (npm run build)..."
 npm run build
+
+# Wir brauchen ab hier den TTY Zugang, falls npm link sudo-Rechte benötigt
+# oder für das interaktive Inquirer-Setup im Anschluss.
+exec < /dev/tty
 
 echo "🔗 Verlinke globales Command 'chyi'..."
 # Handle permissions error on global npm installations (EACCES)
