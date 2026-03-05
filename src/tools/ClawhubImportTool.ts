@@ -39,11 +39,15 @@ export class ClawhubImportTool extends BaseTool<ClawhubArgs> {
       const parsedUrl = new URL(args.url);
 
       // Ensure we are downloading a markdown file (basic validation)
-      if (!parsedUrl.pathname.endsWith('.md')) {
+      // Allow `#` fragments to bypass simple path checks for dummy urls in the MVP store
+      if (!parsedUrl.pathname.endsWith('.md') && !parsedUrl.hash.endsWith('.md')) {
           return "Error: Clawhub URL must point to a raw .md Markdown file.";
       }
 
-      const filename = path.basename(parsedUrl.pathname);
+      // Generate a clean filename without query strings or hashes
+      let filename = path.basename(parsedUrl.pathname);
+      if (!filename.endsWith('.md')) filename += '.md';
+
       const safePath = path.join(this.workspaceDir, filename);
 
       const content = await this.downloadRaw(args.url);
