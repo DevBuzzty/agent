@@ -15,6 +15,7 @@ import { BraveSearchTool } from '../tools/BraveSearchTool';
 import { FileWriterTool } from '../tools/FileWriterTool';
 import { FileEditorTool } from '../tools/FileEditorTool';
 import { ClawhubImportTool } from '../tools/ClawhubImportTool';
+import { MemoryTool } from '../tools/MemoryTool';
 import { LoopDetector } from './LoopDetector';
 import path from 'path';
 
@@ -38,6 +39,8 @@ export class AgenticLoop {
 
     // Register native First-Class Tools
     const workspaceDir = path.join(__dirname, '../../knowledge_modules/workspace');
+    const memoryTool = new MemoryTool(path.join(__dirname, '../../agent_workspace'));
+
     const toolsList: FirstClassTool[] = [
         new ExecTool(sandboxId),
         new BrowserTool(),
@@ -48,8 +51,12 @@ export class AgenticLoop {
         new BraveSearchTool(braveApiKey || 'DUMMY_KEY'),
         new FileWriterTool(pathResolver),
         new FileEditorTool(pathResolver),
-        new ClawhubImportTool(workspaceDir)
+        new ClawhubImportTool(workspaceDir),
+        memoryTool
     ];
+
+    // Inject long term memory into the runner context
+    runner.setMemory(memoryTool.getMemoryDump());
 
     for (const tool of toolsList) {
         this.toolsMap[tool.name] = tool;
@@ -86,9 +93,11 @@ export class AgenticLoop {
         const guardrailError = this.loopDetector.evaluate(response.toolCalls);
         if (guardrailError) {
              // Intentionally silencing the console.warn here to prevent polluting the TUI chat.
-             // The error is still injected into the LLM context silently.
+             // We inject this as a 'user' message instead of 'system', because the AgentRunner
+             // strips non-primary system messages during context window management, which would
+             // cause an orphaned tool_calls 400 API error.
              currentMessages.push({
-                 role: 'system',
+                 role: 'user',
                  content: guardrailError
              });
              continue;

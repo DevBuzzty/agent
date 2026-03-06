@@ -141,8 +141,17 @@ Halte dich unter allen Umständen an diese Persona.
 
   const rl = readline.createInterface({
     input: process.stdin,
-    output: process.stdout
+    output: process.stdout,
+    prompt: clc.white.bold('Du: ')
   });
+
+  // Chat Redraw Logic to maintain a static input bar at the bottom
+  const renderLog = (text: string) => {
+    // Clear current line (the prompt), move cursor up if needed, print log, and redraw prompt
+    process.stdout.write('\r\x1b[K');
+    console.log(text);
+    rl.prompt(true);
+  };
 
   // Native dynamic spinner
   let spinnerInterval: NodeJS.Timeout;
@@ -150,19 +159,19 @@ Halte dich unter allen Umständen an diese Persona.
     const frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
     let i = 0;
     spinnerInterval = setInterval(() => {
-      process.stdout.write(`\r${clc.magenta(frames[i])} ${clc.italic('Agent denkt nach...')} `);
+      process.stdout.write(`\r\x1b[K${clc.blueBright(frames[i])} ${clc.italic('Agent denkt nach...')} `);
       i = (i + 1) % frames.length;
     }, 80);
   };
 
   const stopSpinner = () => {
     clearInterval(spinnerInterval);
-    process.stdout.write('\r\x1b[K'); // clear the line
+    process.stdout.write('\r\x1b[K'); // clear the spinner line
   };
 
-  const askUser = () => {
-    // Print user prompt with color separation
-    rl.question(clc.cyan.bold('Du: '), async (input) => {
+  rl.prompt();
+
+  rl.on('line', async (input) => {
       if (input.toLowerCase() === 'exit' || input.toLowerCase() === 'quit' || input.toLowerCase() === '/exit') {
         rl.close();
         console.log(clc.yellow("\nChat beendet. Das Gateway läuft (sofern gestartet) im Hintergrund weiter.\n"));
@@ -170,7 +179,7 @@ Halte dich unter allen Umständen an diese Persona.
       }
 
       if (!input.trim()) {
-          askUser();
+          rl.prompt();
           return;
       }
 
@@ -178,18 +187,18 @@ Halte dich unter allen Umständen an diese Persona.
       if (input.startsWith('/')) {
         const cmd = input.slice(1).trim();
         if (cmd) {
-            console.log(clc.blackBright("--- Lokale Ausführung ---"));
+            renderLog(clc.blackBright("--- Lokale Ausführung ---"));
             try {
-                // Execute command synchronously so the output appears right away
                 const { execSync } = require('child_process');
-                execSync(cmd, { stdio: 'inherit' });
+                // Capture output to render it cleanly above the prompt
+                const out = execSync(cmd, { encoding: 'utf8' });
+                renderLog(out);
             } catch (err: any) {
-                console.log(clc.red(`\nBefehl fehlgeschlagen: ${err.message}`));
+                renderLog(clc.red(`Befehl fehlgeschlagen: ${err.message}`));
             }
-            console.log(clc.blackBright("-------------------------"));
+            renderLog(clc.blackBright("-------------------------"));
         }
-        askUser();
-        return;
+        return; // Prompt is redrawn by renderLog
       }
 
       const db = await getDb();
@@ -199,6 +208,9 @@ Halte dich unter allen Umständen an diese Persona.
         [messageId, sessionId, 'user', input]
       );
 
+      // Move cursor up to visually lock the input history, but we don't need to do complex redraws.
+      // readline handles the basic scroll, but we freeze the prompt while thinking.
+      rl.pause();
       startSpinner();
 
       const history = await db.all(
@@ -215,7 +227,7 @@ Halte dich unter allen Umständen an diese Persona.
           let formattedResponse = formatMarkdownForTerminal(response, clc);
           formattedResponse = applyBotMessageStyle(formattedResponse, clc);
 
-          console.log(clc.magenta.bold('\nAgent:\n') + formattedResponse + '\n');
+          console.log(clc.blueBright.bold('\nAgent:\n') + formattedResponse + '\n');
           console.log(clc.blackBright("------------------------------------------------------------\n"));
       } catch (err: any) {
           stopSpinner();
@@ -223,9 +235,7 @@ Halte dich unter allen Umständen an diese Persona.
           console.log(clc.blackBright("------------------------------------------------------------\n"));
       }
 
-      askUser();
-    });
-  };
-
-  askUser();
+      rl.resume();
+      rl.prompt();
+  });
 }

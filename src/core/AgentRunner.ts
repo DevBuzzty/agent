@@ -32,6 +32,7 @@ export class AgentRunner {
   private lastCallTime: number = 0;
   private registeredTools: FirstClassTool[] = [];
   private knowledgeManager?: KnowledgeManager;
+  private adaptiveMemory: string = "";
 
   constructor(config: LLMConfig) {
     this.config = config;
@@ -43,6 +44,10 @@ export class AgentRunner {
 
   public setKnowledgeManager(km: KnowledgeManager) {
       this.knowledgeManager = km;
+  }
+
+  public setMemory(memoryDump: string) {
+      this.adaptiveMemory = memoryDump;
   }
 
   private async applyCooling(): Promise<void> {
@@ -87,9 +92,22 @@ export class AgentRunner {
   }
 
   private buildSystemPrompt(): string {
-      let prompt = "You are a highly capable AI agent.\n\nHere are the First-Class Tools available to you. You MUST strictly use their exact JSON Schema for arguments.\n";
+      let prompt = `You are a highly capable, autonomous AI agent.
+
+CRITICAL BEHAVIORAL RULES:
+1. Be extremely brief, sharp, and professional. Save tokens.
+2. NO conversational fluff. Do not say "Das klingt nach einer wundervollen Idee" or "Ich werde jetzt suchen...". Say "Alles klar, so gehen wir vor:" or just deliver the result.
+3. NEVER write tool calls or JSON blocks into your chat responses. You MUST exclusively use the native API tool calling mechanism.
+4. Execute tasks autonomously. Do not ask for permission to run commands or tools if the user requested a task. Just do it and report the final result.
+
+AVAILABLE TOOLS (Use natively, NEVER output as markdown):
+`;
       for (const tool of this.registeredTools) {
           prompt += `---\n${tool.getSystemPromptText()}\n`;
+      }
+
+      if (this.adaptiveMemory) {
+          prompt += `\n\n--- LONG-TERM ADAPTIVE MEMORY (User facts & preferences) ---\n${this.adaptiveMemory}\n`;
       }
 
       // Phase 4: Dynamic Knowledge Injection

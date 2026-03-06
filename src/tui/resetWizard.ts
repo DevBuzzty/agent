@@ -10,7 +10,7 @@ export async function runResetWizard() {
 
   const { resetType } = await inquirer.prompt([
     {
-      type: 'list', loop: false,
+      type: 'list', loop: false, pageSize: 30,
       name: 'resetType',
       message: 'Welche Art von Reset möchtest du durchführen?',
       choices: [

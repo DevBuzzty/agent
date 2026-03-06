@@ -13,7 +13,7 @@ export async function showMainMenu() {
 
   const { action } = await inquirer.prompt([
     {
-      type: 'list', loop: false,
+      type: 'list', loop: false, pageSize: 30,
       name: 'action',
       message: 'Was möchtest du tun?',
       choices: [
